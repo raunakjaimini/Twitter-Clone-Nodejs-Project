@@ -4,29 +4,54 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const multer = require("multer");
 const userRoute = require("./routes/users");
 const authRoute = require("./routes/auth");
 const postRoute = require("./routes/post");
+const path = require("path");
 
 dotenv.config();
 
-mongoose.connect("mongodb+srv://jaiminiraunak30:password1234@cluster0.upwxnvq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"),()=>{
-    console.log("Connected to MongoDB")
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+    process.exit(1);
+  }
 };
 
-//middleware
+// Call the connectDB function to connect to MongoDB
+connectDB();
+
+app.use("/images", express.static(path.join(__dirname, "public/images")));
+
+// Middleware
 app.use(express.json());
 app.use(helmet());
 app.use(morgan("common"));
 
-// app.get("/users",(req,res)=>{
-//     res.send("Welcome to users")
-// })
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/images");
+  },
+  filename: (req, file, cb) => {
+    cb(null, req.body.name);
+  },
+});
 
-// app.get("/",(req,res)=>{
-//     res.send("Welcome to homepage")
-// })
-
+const upload = multer({ storage: storage });
+app.post("/api/upload", upload.single("file"), (req, res) => {
+  try {
+    return res.status(200).json("File uploaded successfully");
+  } catch (error) {
+    console.error(error);
+  }
+});
 
 app.use("/api/auth", authRoute);
 app.use("/api/users", userRoute);
